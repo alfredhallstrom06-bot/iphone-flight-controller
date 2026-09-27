@@ -1,93 +1,205 @@
 <!DOCTYPE html>
+
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iPhone Flight Controller</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background: #111;
-            color: white;
-            padding: 20px;
-        }
+```
+<title>iPhone Flight Controller</title>
 
-        button {
-            font-size: 20px;
-            padding: 15px 25px;
-            margin: 20px;
-        }
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background: #111;
+        color: white;
+        padding: 20px;
+    }
 
-        .value {
-            font-size: 24px;
-            margin: 15px;
-        }
-    </style>
+    button {
+        font-size: 20px;
+        padding: 15px 25px;
+        margin: 20px;
+    }
+
+    .value {
+        font-size: 22px;
+        margin: 12px;
+    }
+
+    .motor {
+        font-size: 26px;
+        margin: 15px;
+        padding: 15px;
+        border: 2px solid white;
+        border-radius: 10px;
+    }
+</style>
+```
+
 </head>
 
 <body>
 
-    <h1>iPhone Flight Controller</h1>
+```
+<h1>iPhone Flight Controller</h1>
 
-    <button onclick="startSensors()">
-        Starta sensorer
-    </button>
+<button onclick="startSensors()">
+    Starta sensorer
+</button>
 
-    <div class="value">
-        Roll: <span id="roll">0</span>°
-    </div>
+<h2>Sensorer</h2>
 
-    <div class="value">
-        Pitch: <span id="pitch">0</span>°
-    </div>
+<div class="value">
+    Roll: <span id="roll">0</span>°
+</div>
 
-    <div class="value">
-        Yaw: <span id="yaw">0</span>°
-    </div>
+<div class="value">
+    Pitch: <span id="pitch">0</span>°
+</div>
 
-    <script>
+<div class="value">
+    Yaw: <span id="yaw">0</span>°
+</div>
 
-        async function startSensors() {
+<h2>Virtuella motorer</h2>
 
-            if (
-                typeof DeviceOrientationEvent !== "undefined" &&
-                typeof DeviceOrientationEvent.requestPermission === "function"
-            ) {
+<div class="motor">
+    M1: <span id="motor1">50</span>%
+</div>
 
-                const permission =
-                    await DeviceOrientationEvent.requestPermission();
+<div class="motor">
+    M2: <span id="motor2">50</span>%
+</div>
 
-                if (permission !== "granted") {
-                    alert("Du måste tillåta rörelsesensorer.");
-                    return;
-                }
+<div class="motor">
+    M3: <span id="motor3">50</span>%
+</div>
+
+<div class="motor">
+    M4: <span id="motor4">50</span>%
+</div>
+
+
+<script>
+
+    let roll = 0;
+    let pitch = 0;
+    let yaw = 0;
+
+    const baseThrottle = 50;
+
+    async function startSensors() {
+
+        if (
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
+
+            const permission =
+                await DeviceOrientationEvent.requestPermission();
+
+            if (permission !== "granted") {
+                alert("Du måste tillåta rörelsesensorer.");
+                return;
             }
-
-            window.addEventListener(
-                "deviceorientation",
-                handleOrientation
-            );
         }
 
-        function handleOrientation(event) {
+        window.addEventListener(
+            "deviceorientation",
+            handleOrientation
+        );
+    }
 
-            let roll = event.gamma;
-            let pitch = event.beta;
-            let yaw = event.alpha;
 
-            document.getElementById("roll").textContent =
-                roll.toFixed(2);
+    function handleOrientation(event) {
 
-            document.getElementById("pitch").textContent =
-                pitch.toFixed(2);
+        roll = event.gamma || 0;
+        pitch = event.beta || 0;
+        yaw = event.alpha || 0;
 
-            document.getElementById("yaw").textContent =
-                yaw.toFixed(2);
-        }
+        document.getElementById("roll").textContent =
+            roll.toFixed(1);
 
-    </script>
+        document.getElementById("pitch").textContent =
+            pitch.toFixed(1);
+
+        document.getElementById("yaw").textContent =
+            yaw.toFixed(1);
+
+        updateMotors();
+    }
+
+
+    function updateMotors() {
+
+        /*
+            Enkel quadcopter-mixer.
+
+            Roll:
+            + roll = luta åt höger
+
+            Pitch:
+            + pitch = luta framåt
+
+            Yaw används ännu inte.
+        */
+
+        let motor1 = baseThrottle;
+        let motor2 = baseThrottle;
+        let motor3 = baseThrottle;
+        let motor4 = baseThrottle;
+
+
+        // Roll
+
+        motor1 -= roll;
+        motor2 += roll;
+        motor3 += roll;
+        motor4 -= roll;
+
+
+        // Pitch
+
+        motor1 -= pitch;
+        motor2 -= pitch;
+        motor3 += pitch;
+        motor4 += pitch;
+
+
+        // Begränsa mellan 0 och 100 %
+
+        motor1 = constrain(motor1, 0, 100);
+        motor2 = constrain(motor2, 0, 100);
+        motor3 = constrain(motor3, 0, 100);
+        motor4 = constrain(motor4, 0, 100);
+
+
+        document.getElementById("motor1").textContent =
+            motor1.toFixed(0);
+
+        document.getElementById("motor2").textContent =
+            motor2.toFixed(0);
+
+        document.getElementById("motor3").textContent =
+            motor3.toFixed(0);
+
+        document.getElementById("motor4").textContent =
+            motor4.toFixed(0);
+    }
+
+
+    function constrain(value, min, max) {
+
+        return Math.min(
+            Math.max(value, min),
+            max
+        );
+    }
+
+</script>
+```
 
 </body>
 </html>
