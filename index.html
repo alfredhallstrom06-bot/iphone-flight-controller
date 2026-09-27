@@ -33,8 +33,8 @@
         border-radius: 10px;
     }
 
-    .axis {
-        margin: 8px;
+    .value {
+        margin: 10px;
     }
 
 </style>
@@ -56,16 +56,22 @@
 
 <div class="sensor">
 
-    <div class="axis">
-        X: <span id="accX">0</span> m/s²
+    <div class="value">
+        X:
+        <span id="accX">0</span>
+        m/s²
     </div>
 
-    <div class="axis">
-        Y: <span id="accY">0</span> m/s²
+    <div class="value">
+        Y:
+        <span id="accY">0</span>
+        m/s²
     </div>
 
-    <div class="axis">
-        Z: <span id="accZ">0</span> m/s²
+    <div class="value">
+        Z:
+        <span id="accZ">0</span>
+        m/s²
     </div>
 
 </div>
@@ -75,16 +81,39 @@
 
 <div class="sensor">
 
-    <div class="axis">
-        X: <span id="gyroX">0</span> °/s
+    <div class="value">
+        X:
+        <span id="gyroX">0</span>
+        °/s
     </div>
 
-    <div class="axis">
-        Y: <span id="gyroY">0</span> °/s
+    <div class="value">
+        Y:
+        <span id="gyroY">0</span>
+        °/s
     </div>
 
-    <div class="axis">
-        Z: <span id="gyroZ">0</span> °/s
+    <div class="value">
+        Z:
+        <span id="gyroZ">0</span>
+        °/s
+    </div>
+
+</div>
+
+
+<h2>Sensor Fusion</h2>
+
+<div class="sensor">
+
+    <div class="value">
+        Roll:
+        <span id="roll">0</span>°
+    </div>
+
+    <div class="value">
+        Pitch:
+        <span id="pitch">0</span>°
     </div>
 
 </div>
@@ -92,11 +121,35 @@
 
 <script>
 
+    /*
+        Våra uppskattade vinklar
+    */
+
+    let roll = 0;
+    let pitch = 0;
+
+    /*
+        Tidpunkt för senaste sensoruppdateringen
+    */
+
+    let lastTime = null;
+
+
+    /*
+        Komplementärt filter.
+
+        0.98 = gyro
+        0.02 = accelerometer
+    */
+
+    const gyroWeight = 0.98;
+    const accelWeight = 0.02;
+
+
     async function startSensors() {
 
         /*
-            iOS kräver användarens tillåtelse
-            för rörelsesensorer.
+            iOS permission
         */
 
         if (
@@ -117,8 +170,9 @@
             }
         }
 
+
         /*
-            Starta DeviceMotion
+            Starta sensorn
         */
 
         window.addEventListener(
@@ -132,50 +186,94 @@
     function handleMotion(event) {
 
         /*
-            Accelerometer
+            Hämta accelerometer
         */
 
-        const acceleration =
+        const acc =
             event.accelerationIncludingGravity;
 
-        if (acceleration) {
 
-            document.getElementById("accX").textContent =
-                (acceleration.x || 0).toFixed(2);
+        /*
+            Hämta gyro
+        */
 
-            document.getElementById("accY").textContent =
-                (acceleration.y || 0).toFixed(2);
+        const gyro =
+            event.rotationRate;
 
-            document.getElementById("accZ").textContent =
-                (acceleration.z || 0).toFixed(2);
+
+        if (!acc || !gyro) {
+            return;
+        }
+
+
+        /*
+            Visa rådata
+        */
+
+        document.getElementById("accX").textContent =
+            (acc.x || 0).toFixed(2);
+
+        document.getElementById("accY").textContent =
+            (acc.y || 0).toFixed(2);
+
+        document.getElementById("accZ").textContent =
+            (acc.z || 0).toFixed(2);
+
+
+        document.getElementById("gyroX").textContent =
+            (gyro.alpha || 0).toFixed(2);
+
+        document.getElementById("gyroY").textContent =
+            (gyro.beta || 0).toFixed(2);
+
+        document.getElementById("gyroZ").textContent =
+            (gyro.gamma || 0).toFixed(2);
+
+
+        /*
+            Tid
+        */
+
+        const now =
+            performance.now();
+
+
+        if (lastTime === null) {
+
+            lastTime = now;
+            return;
 
         }
 
 
         /*
-            Gyroscope
+            Delta time i sekunder
         */
 
-        const rotation =
-            event.rotationRate;
+        const dt =
+            (now - lastTime) / 1000;
 
-        if (rotation) {
 
-            document.getElementById("gyroX").textContent =
-                (rotation.alpha || 0).toFixed(2);
+        lastTime = now;
 
-            document.getElementById("gyroY").textContent =
-                (rotation.beta || 0).toFixed(2);
 
-            document.getElementById("gyroZ").textContent =
-                (rotation.gamma || 0).toFixed(2);
+        /*
+            Accelerometer → vinkel
 
-        }
+            Gravitationen används som referens.
+        */
 
-    }
+        const accelRoll =
+            Math.atan2(
+                acc.y,
+                acc.z
+            ) * 180 / Math.PI;
 
-</script>
+
+        const accelPitch =
+            Math.atan2(
+                -acc.x,
+                Math.sqrt(
+                    acc.y * acc.y +
+                    acc.z * acc.z
 ```
-
-</body>
-</html>
