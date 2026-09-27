@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPhone Flight Controller</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #111;
+            color: white;
+            padding: 20px;
+        }
+
+        button {
+            font-size: 20px;
+            padding: 15px 25px;
+            margin: 20px;
+        }
+
+        .value {
+            font-size: 24px;
+            margin: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>iPhone Flight Controller</h1>
+
+    <button onclick="startSensors()">
+        Starta sensorer
+    </button>
+
+    <div class="value">
+        Roll: <span id="roll">0</span>°
+    </div>
+
+    <div class="value">
+        Pitch: <span id="pitch">0</span>°
+    </div>
+
+    <div class="value">
+        Yaw: <span id="yaw">0</span>°
+    </div>
+
+    <script>
+
+        async function startSensors() {
+
+            if (
+                typeof DeviceOrientationEvent !== "undefined" &&
+                typeof DeviceOrientationEvent.requestPermission === "function"
+            ) {
+
+                const permission =
+                    await DeviceOrientationEvent.requestPermission();
+
+                if (permission !== "granted") {
+                    alert("Du måste tillåta rörelsesensorer.");
+                    return;
+                }
+            }
+
+            window.addEventListener(
+                "deviceorientation",
+                handleOrientation
+            );
+        }
+
+        function handleOrientation(event) {
+
+            let roll = event.gamma;
+            let pitch = event.beta;
+            let yaw = event.alpha;
+
+            document.getElementById("roll").textContent =
+                roll.toFixed(2);
+
+            document.getElementById("pitch").textContent =
+                pitch.toFixed(2);
+
+            document.getElementById("yaw").textContent =
+                yaw.toFixed(2);
+        }
+
+    </script>
+
+</body>
+</html>
