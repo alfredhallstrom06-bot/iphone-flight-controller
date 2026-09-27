@@ -24,10 +24,12 @@ body {
 button {
     font-size: 20px;
     padding: 15px 25px;
-    margin: 20px;
+    margin: 15px;
 }
 
-.sensor {
+.sensor,
+.motor,
+.pid {
     font-size: 20px;
     margin: 15px;
     padding: 15px;
@@ -37,6 +39,17 @@ button {
 
 .value {
     margin: 10px;
+}
+
+input {
+    width: 100px;
+    font-size: 18px;
+    margin: 5px;
+}
+
+.motor {
+    display: inline-block;
+    width: 130px;
 }
 
 </style>
@@ -51,57 +64,104 @@ button {
 Starta sensorer
 </button>
 
-<h2>Accelerometer</h2>
-
-<div class="sensor">
-
-<div class="value">
-X: <span id="accX">0</span> m/s²
-</div>
-
-<div class="value">
-Y: <span id="accY">0</span> m/s²
-</div>
-
-<div class="value">
-Z: <span id="accZ">0</span> m/s²
-</div>
-
-</div>
-
-<h2>Gyroskop</h2>
-
-<div class="sensor">
-
-<div class="value">
-X: <span id="gyroX">0</span> °/s
-</div>
-
-<div class="value">
-Y: <span id="gyroY">0</span> °/s
-</div>
-
-<div class="value">
-Z: <span id="gyroZ">0</span> °/s
-</div>
-
-</div>
-
 <h2>Sensor Fusion</h2>
 
 <div class="sensor">
 
 <div class="value">
-Roll: <span id="roll">0</span>°
+Roll:
+<span id="roll">0</span>°
 </div>
 
 <div class="value">
-Pitch: <span id="pitch">0</span>°
+Pitch:
+<span id="pitch">0</span>°
 </div>
 
+</div>
+
+<h2>PID</h2>
+
+<div class="pid">
+
+<div>
+Roll P:
+<input id="rollP" type="number" value="1.5" step="0.1">
+</div>
+
+<div>
+Roll I:
+<input id="rollI" type="number" value="0.02" step="0.01">
+</div>
+
+<div>
+Roll D:
+<input id="rollD" type="number" value="0.3" step="0.1">
+</div>
+
+<br>
+
+<div>
+Pitch P:
+<input id="pitchP" type="number" value="1.5" step="0.1">
+</div>
+
+<div>
+Pitch I:
+<input id="pitchI" type="number" value="0.02" step="0.01">
+</div>
+
+<div>
+Pitch D:
+<input id="pitchD" type="number" value="0.3" step="0.1">
+</div>
+
+</div>
+
+<h2>PID Output</h2>
+
+<div class="sensor">
+
+<div class="value">
+Roll:
+<span id="rollPID">0</span>
+</div>
+
+<div class="value">
+Pitch:
+<span id="pitchPID">0</span>
+</div>
+
+</div>
+
+<h2>Virtuella motorer</h2>
+
+<div class="motor">
+M1<br>
+<span id="motor1">50</span>%
+</div>
+
+<div class="motor">
+M2<br>
+<span id="motor2">50</span>%
+</div>
+
+<div class="motor">
+M3<br>
+<span id="motor3">50</span>%
+</div>
+
+<div class="motor">
+M4<br>
+<span id="motor4">50</span>%
 </div>
 
 <script>
+
+
+/* =========================
+   SENSOR FUSION
+========================= */
 
 let roll = 0;
 let pitch = 0;
@@ -111,6 +171,21 @@ let lastTime = null;
 const gyroWeight = 0.98;
 const accelWeight = 0.02;
 
+
+/* =========================
+   PID STATE
+========================= */
+
+let rollIntegral = 0;
+let pitchIntegral = 0;
+
+let previousRollError = 0;
+let previousPitchError = 0;
+
+
+/* =========================
+   START SENSORER
+========================= */
 
 async function startSensors() {
 
@@ -132,14 +207,18 @@ async function startSensors() {
             }
         }
 
+
         window.addEventListener(
             "devicemotion",
             handleMotion
         );
 
+
         alert("Sensorerna är startade!");
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         alert("Fel: " + error);
 
@@ -147,6 +226,10 @@ async function startSensors() {
 
 }
 
+
+/* =========================
+   SENSOR DATA
+========================= */
 
 function handleMotion(event) {
 
@@ -160,26 +243,6 @@ function handleMotion(event) {
     if (!acc || !gyro) {
         return;
     }
-
-
-    document.getElementById("accX").textContent =
-        (acc.x || 0).toFixed(2);
-
-    document.getElementById("accY").textContent =
-        (acc.y || 0).toFixed(2);
-
-    document.getElementById("accZ").textContent =
-        (acc.z || 0).toFixed(2);
-
-
-    document.getElementById("gyroX").textContent =
-        (gyro.alpha || 0).toFixed(2);
-
-    document.getElementById("gyroY").textContent =
-        (gyro.beta || 0).toFixed(2);
-
-    document.getElementById("gyroZ").textContent =
-        (gyro.gamma || 0).toFixed(2);
 
 
     const now =
@@ -197,8 +260,13 @@ function handleMotion(event) {
     const dt =
         (now - lastTime) / 1000;
 
+
     lastTime = now;
 
+
+    /*
+       Accelerometer-vinklar
+    */
 
     const accelRoll =
         Math.atan2(
@@ -217,12 +285,21 @@ function handleMotion(event) {
         ) * 180 / Math.PI;
 
 
+    /*
+       Gyro
+    */
+
     const gyroRollRate =
         gyro.beta || 0;
+
 
     const gyroPitchRate =
         gyro.gamma || 0;
 
+
+    /*
+       Integrera gyro
+    */
 
     roll +=
         gyroRollRate * dt;
@@ -231,20 +308,302 @@ function handleMotion(event) {
         gyroPitchRate * dt;
 
 
+    /*
+       Sensor fusion
+    */
+
     roll =
         gyroWeight * roll +
         accelWeight * accelRoll;
+
 
     pitch =
         gyroWeight * pitch +
         accelWeight * accelPitch;
 
 
+    /*
+       Visa vinklar
+    */
+
     document.getElementById("roll").textContent =
         roll.toFixed(2);
 
     document.getElementById("pitch").textContent =
         pitch.toFixed(2);
+
+
+    /*
+       PID
+    */
+
+    updatePID(dt);
+
+}
+
+
+/* =========================
+   PID
+========================= */
+
+function updatePID(dt) {
+
+
+    /*
+       Målet är att vara helt horisontell.
+    */
+
+    const targetRoll = 0;
+
+    const targetPitch = 0;
+
+
+    /*
+       FEL
+    */
+
+    const rollError =
+        targetRoll - roll;
+
+    const pitchError =
+        targetPitch - pitch;
+
+
+    /*
+       P
+    */
+
+    const rollP =
+        parseFloat(
+            document.getElementById("rollP").value
+        );
+
+    const pitchP =
+        parseFloat(
+            document.getElementById("pitchP").value
+        );
+
+
+    /*
+       I
+    */
+
+    const rollI =
+        parseFloat(
+            document.getElementById("rollI").value
+        );
+
+    const pitchI =
+        parseFloat(
+            document.getElementById("pitchI").value
+        );
+
+
+    /*
+       D
+    */
+
+    const rollD =
+        parseFloat(
+            document.getElementById("rollD").value
+        );
+
+    const pitchD =
+        parseFloat(
+            document.getElementById("pitchD").value
+        );
+
+
+    /*
+       Integral
+    */
+
+    rollIntegral +=
+        rollError * dt;
+
+    pitchIntegral +=
+        pitchError * dt;
+
+
+    /*
+       Begränsa integral
+       så den inte växer okontrollerat.
+    */
+
+    rollIntegral =
+        constrain(
+            rollIntegral,
+            -100,
+            100
+        );
+
+    pitchIntegral =
+        constrain(
+            pitchIntegral,
+            -100,
+            100
+        );
+
+
+    /*
+       Derivative
+    */
+
+    const rollDerivative =
+        (rollError - previousRollError) / dt;
+
+    const pitchDerivative =
+        (pitchError - previousPitchError) / dt;
+
+
+    previousRollError =
+        rollError;
+
+    previousPitchError =
+        pitchError;
+
+
+    /*
+       PID OUTPUT
+    */
+
+    const rollOutput =
+        rollP * rollError +
+        rollI * rollIntegral +
+        rollD * rollDerivative;
+
+
+    const pitchOutput =
+        pitchP * pitchError +
+        pitchI * pitchIntegral +
+        pitchD * pitchDerivative;
+
+
+    /*
+       Visa PID
+    */
+
+    document.getElementById("rollPID").textContent =
+        rollOutput.toFixed(2);
+
+    document.getElementById("pitchPID").textContent =
+        pitchOutput.toFixed(2);
+
+
+    /*
+       Motor mixer
+    */
+
+    updateMotors(
+        rollOutput,
+        pitchOutput
+    );
+
+}
+
+
+/* =========================
+   MOTOR MIXER
+========================= */
+
+function updateMotors(
+    rollOutput,
+    pitchOutput
+) {
+
+
+    /*
+       Grundgas.
+       Detta är bara en virtuell
+       representation.
+    */
+
+    const baseThrottle = 50;
+
+
+    let motor1 =
+        baseThrottle;
+
+    let motor2 =
+        baseThrottle;
+
+    let motor3 =
+        baseThrottle;
+
+    let motor4 =
+        baseThrottle;
+
+
+    /*
+       Roll
+    */
+
+    motor1 -= rollOutput;
+    motor2 += rollOutput;
+    motor3 += rollOutput;
+    motor4 -= rollOutput;
+
+
+    /*
+       Pitch
+    */
+
+    motor1 -= pitchOutput;
+    motor2 -= pitchOutput;
+    motor3 += pitchOutput;
+    motor4 += pitchOutput;
+
+
+    /*
+       Begränsa 0–100 %
+    */
+
+    motor1 =
+        constrain(motor1, 0, 100);
+
+    motor2 =
+        constrain(motor2, 0, 100);
+
+    motor3 =
+        constrain(motor3, 0, 100);
+
+    motor4 =
+        constrain(motor4, 0, 100);
+
+
+    /*
+       Visa motorvärden
+    */
+
+    document.getElementById("motor1").textContent =
+        motor1.toFixed(1);
+
+    document.getElementById("motor2").textContent =
+        motor2.toFixed(1);
+
+    document.getElementById("motor3").textContent =
+        motor3.toFixed(1);
+
+    document.getElementById("motor4").textContent =
+        motor4.toFixed(1);
+
+}
+
+
+/* =========================
+   LIMIT
+========================= */
+
+function constrain(
+    value,
+    min,
+    max
+) {
+
+    return Math.min(
+        Math.max(value, min),
+        max
+    );
 
 }
 
