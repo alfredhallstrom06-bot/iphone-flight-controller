@@ -1,156 +1,120 @@
 <!DOCTYPE html>
 
 <html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
 
-```
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+   content="width=device-width, initial-scale=1.0">
+
 <title>iPhone Flight Controller</title>
 
 <style>
 
-    body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        background: #111;
-        color: white;
-        padding: 20px;
-    }
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #111;
+    color: white;
+    padding: 20px;
+}
 
-    button {
-        font-size: 20px;
-        padding: 15px 25px;
-        margin: 20px;
-    }
+button {
+    font-size: 20px;
+    padding: 15px 25px;
+    margin: 20px;
+}
 
-    .sensor {
-        font-size: 20px;
-        margin: 15px;
-        padding: 15px;
-        border: 2px solid white;
-        border-radius: 10px;
-    }
+.sensor {
+    font-size: 20px;
+    margin: 15px;
+    padding: 15px;
+    border: 2px solid white;
+    border-radius: 10px;
+}
 
-    .value {
-        margin: 10px;
-    }
+.value {
+    margin: 10px;
+}
 
 </style>
-```
 
 </head>
 
 <body>
 
-```
 <h1>iPhone Flight Controller</h1>
 
 <button onclick="startSensors()">
-    Starta sensorer
+Starta sensorer
 </button>
-
 
 <h2>Accelerometer</h2>
 
 <div class="sensor">
 
-    <div class="value">
-        X:
-        <span id="accX">0</span>
-        m/s²
-    </div>
-
-    <div class="value">
-        Y:
-        <span id="accY">0</span>
-        m/s²
-    </div>
-
-    <div class="value">
-        Z:
-        <span id="accZ">0</span>
-        m/s²
-    </div>
-
+<div class="value">
+X: <span id="accX">0</span> m/s²
 </div>
 
+<div class="value">
+Y: <span id="accY">0</span> m/s²
+</div>
+
+<div class="value">
+Z: <span id="accZ">0</span> m/s²
+</div>
+
+</div>
 
 <h2>Gyroskop</h2>
 
 <div class="sensor">
 
-    <div class="value">
-        X:
-        <span id="gyroX">0</span>
-        °/s
-    </div>
-
-    <div class="value">
-        Y:
-        <span id="gyroY">0</span>
-        °/s
-    </div>
-
-    <div class="value">
-        Z:
-        <span id="gyroZ">0</span>
-        °/s
-    </div>
-
+<div class="value">
+X: <span id="gyroX">0</span> °/s
 </div>
 
+<div class="value">
+Y: <span id="gyroY">0</span> °/s
+</div>
+
+<div class="value">
+Z: <span id="gyroZ">0</span> °/s
+</div>
+
+</div>
 
 <h2>Sensor Fusion</h2>
 
 <div class="sensor">
 
-    <div class="value">
-        Roll:
-        <span id="roll">0</span>°
-    </div>
+<div class="value">
+Roll: <span id="roll">0</span>°
+</div>
 
-    <div class="value">
-        Pitch:
-        <span id="pitch">0</span>°
-    </div>
+<div class="value">
+Pitch: <span id="pitch">0</span>°
+</div>
 
 </div>
 
-
 <script>
 
-    /*
-        Våra uppskattade vinklar
-    */
+let roll = 0;
+let pitch = 0;
 
-    let roll = 0;
-    let pitch = 0;
+let lastTime = null;
 
-    /*
-        Tidpunkt för senaste sensoruppdateringen
-    */
-
-    let lastTime = null;
+const gyroWeight = 0.98;
+const accelWeight = 0.02;
 
 
-    /*
-        Komplementärt filter.
+async function startSensors() {
 
-        0.98 = gyro
-        0.02 = accelerometer
-    */
-
-    const gyroWeight = 0.98;
-    const accelWeight = 0.02;
-
-
-    async function startSensors() {
-
-        /*
-            iOS permission
-        */
+    try {
 
         if (
             typeof DeviceMotionEvent !== "undefined" &&
@@ -162,118 +126,130 @@
 
             if (permission !== "granted") {
 
-                alert(
-                    "Du måste tillåta rörelsesensorer."
-                );
+                alert("Sensoråtkomst nekades.");
 
                 return;
             }
         }
-
-
-        /*
-            Starta sensorn
-        */
 
         window.addEventListener(
             "devicemotion",
             handleMotion
         );
 
+        alert("Sensorerna är startade!");
+
+    } catch (error) {
+
+        alert("Fel: " + error);
+
+    }
+
+}
+
+
+function handleMotion(event) {
+
+    const acc =
+        event.accelerationIncludingGravity;
+
+    const gyro =
+        event.rotationRate;
+
+
+    if (!acc || !gyro) {
+        return;
     }
 
 
-    function handleMotion(event) {
+    document.getElementById("accX").textContent =
+        (acc.x || 0).toFixed(2);
 
-        /*
-            Hämta accelerometer
-        */
+    document.getElementById("accY").textContent =
+        (acc.y || 0).toFixed(2);
 
-        const acc =
-            event.accelerationIncludingGravity;
-
-
-        /*
-            Hämta gyro
-        */
-
-        const gyro =
-            event.rotationRate;
+    document.getElementById("accZ").textContent =
+        (acc.z || 0).toFixed(2);
 
 
-        if (!acc || !gyro) {
-            return;
-        }
+    document.getElementById("gyroX").textContent =
+        (gyro.alpha || 0).toFixed(2);
+
+    document.getElementById("gyroY").textContent =
+        (gyro.beta || 0).toFixed(2);
+
+    document.getElementById("gyroZ").textContent =
+        (gyro.gamma || 0).toFixed(2);
 
 
-        /*
-            Visa rådata
-        */
-
-        document.getElementById("accX").textContent =
-            (acc.x || 0).toFixed(2);
-
-        document.getElementById("accY").textContent =
-            (acc.y || 0).toFixed(2);
-
-        document.getElementById("accZ").textContent =
-            (acc.z || 0).toFixed(2);
+    const now =
+        performance.now();
 
 
-        document.getElementById("gyroX").textContent =
-            (gyro.alpha || 0).toFixed(2);
-
-        document.getElementById("gyroY").textContent =
-            (gyro.beta || 0).toFixed(2);
-
-        document.getElementById("gyroZ").textContent =
-            (gyro.gamma || 0).toFixed(2);
-
-
-        /*
-            Tid
-        */
-
-        const now =
-            performance.now();
-
-
-        if (lastTime === null) {
-
-            lastTime = now;
-            return;
-
-        }
-
-
-        /*
-            Delta time i sekunder
-        */
-
-        const dt =
-            (now - lastTime) / 1000;
-
+    if (lastTime === null) {
 
         lastTime = now;
 
-
-        /*
-            Accelerometer → vinkel
-
-            Gravitationen används som referens.
-        */
-
-        const accelRoll =
-            Math.atan2(
-                acc.y,
-                acc.z
-            ) * 180 / Math.PI;
+        return;
+    }
 
 
-        const accelPitch =
-            Math.atan2(
-                -acc.x,
-                Math.sqrt(
-                    acc.y * acc.y +
-                    acc.z * acc.z
-```
+    const dt =
+        (now - lastTime) / 1000;
+
+    lastTime = now;
+
+
+    const accelRoll =
+        Math.atan2(
+            acc.y,
+            acc.z
+        ) * 180 / Math.PI;
+
+
+    const accelPitch =
+        Math.atan2(
+            -acc.x,
+            Math.sqrt(
+                acc.y * acc.y +
+                acc.z * acc.z
+            )
+        ) * 180 / Math.PI;
+
+
+    const gyroRollRate =
+        gyro.beta || 0;
+
+    const gyroPitchRate =
+        gyro.gamma || 0;
+
+
+    roll +=
+        gyroRollRate * dt;
+
+    pitch +=
+        gyroPitchRate * dt;
+
+
+    roll =
+        gyroWeight * roll +
+        accelWeight * accelRoll;
+
+    pitch =
+        gyroWeight * pitch +
+        accelWeight * accelPitch;
+
+
+    document.getElementById("roll").textContent =
+        roll.toFixed(2);
+
+    document.getElementById("pitch").textContent =
+        pitch.toFixed(2);
+
+}
+
+</script>
+
+</body>
+
+</html>
